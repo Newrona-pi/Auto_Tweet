@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Source {
+  id        Int      @id @default(autoincrement())
+  name      String
+  url       String   @unique
+  type      String   @default("rss") // "rss" or "youtube" (future)
+  category  String   // "ai", "semiconductor", "tech"
+  language  String   @default("en") // "en" or "ja"
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items Item[]
+}
+
+model Item {
+  id          Int      @id @default(autoincrement())
+  sourceId    Int
+  source      Source   @relation(fields: [sourceId], references: [id])
+  title       String
+  url         String   @unique
+  publishedAt DateTime
+  description String?  @db.Text // Short excerpt only, NO full text
+  imageUrl    String?
+
+  attentionScore Float @default(0.0)
+  topicId        Int?
+  topic          Topic? @relation(fields: [topicId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sourceId])
+  @@index([topicId])
+  @@index([publishedAt])
+  @@index([attentionScore])
+}
+
+model Topic {
+  id          Int      @id @default(autoincrement())
+  name        String
+  clusteredAt DateTime @default(now())
+
+  items     Item[]
+  summaries Summary[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Summary {
+  id              Int    @id @default(autoincrement())
+  topicId         Int
+  topic           Topic  @relation(fields: [topicId], references: [id])
+  japaneseSummary String @db.Text // Japanese summary
+  whyHot          String @db.Text // Why it's hot explanation (Japanese)
+
+  createdAt DateTime @default(now())
+
+  draftPosts DraftPost[]
+
+  @@index([topicId])
+}
+
+model DraftPost {
+  id        Int      @id @default(autoincrement())
+  summaryId Int
+  summary   Summary  @relation(fields: [summaryId], references: [id])
+  content   String   @db.Text // 80-140 characters
+  posted    Boolean  @default(false)
+  postedAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([summaryId])
+  @@index([posted])
+}

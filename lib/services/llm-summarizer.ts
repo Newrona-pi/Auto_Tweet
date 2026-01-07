@@ -1,9 +1,16 @@
 import OpenAI from 'openai';
 import { prisma } from '@/lib/prisma';
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization of OpenAI client
+function getOpenAIClient() {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+        throw new Error('OPENAI_API_KEY is not defined');
+    }
+    return new OpenAI({
+        apiKey: apiKey,
+    });
+}
 
 export interface SummarizationResult {
     summariesCreated: number;
@@ -54,7 +61,7 @@ export async function summarizeTopics(topCount: number = 5): Promise<Summarizati
             console.log(`  Generating summary for topic: ${topic.name}`);
 
             // Generate Japanese summary and "why it's hot" explanation
-            const summaryResponse = await openai.chat.completions.create({
+            const summaryResponse = await getOpenAIClient().chat.completions.create({
                 model: 'gpt-4o',
                 messages: [
                     {
@@ -101,7 +108,7 @@ JSONフォーマットで回答してください：
             // Generate X draft (80-140 characters)
             console.log(`  Generating X draft...`);
 
-            const draftResponse = await openai.chat.completions.create({
+            const draftResponse = await getOpenAIClient().chat.completions.create({
                 model: 'gpt-4o',
                 messages: [
                     {

@@ -133,11 +133,6 @@ JSON形式で回答してください：
 {
   "content": "投稿テキスト（80-140文字）"
 }`,
-
-                        JSON形式で回答してください：
-{
-                        "content": "投稿テキスト（80-140文字）"
-                    }`,
                     },
                 ],
                 response_format: { type: 'json_object' },
@@ -149,14 +144,14 @@ JSON形式で回答してください：
 
             // Enforce 80-140 character limit
             if (draftContent.length < 80) {
-                console.warn(`  ⚠ Draft too short(${ draftContent.length } chars), regenerating...`);
+                console.warn(`  ⚠ Draft too short(${draftContent.length} chars), regenerating...`);
                 // Truncate the summary for a shorter prompt
                 const shortSummary = summaryData.japaneseSummary.substring(0, 100);
-                draftContent = `🚨 ${ topic.name }の最新動向: ${ shortSummary }...`;
+                draftContent = `🚨 ${topic.name}の最新動向: ${shortSummary}...`;
             }
 
             if (draftContent.length > 140) {
-                console.warn(`  ⚠ Draft too long(${ draftContent.length } chars), truncating...`);
+                console.warn(`  ⚠ Draft too long(${draftContent.length} chars), truncating...`);
                 draftContent = draftContent.substring(0, 137) + '...';
             }
 
@@ -169,13 +164,13 @@ JSON形式で回答してください：
             });
 
             draftsCreated++;
-            console.log(`  ✓ Created X draft(${ draftContent.length } chars)`);
+            console.log(`  ✓ Created X draft(${draftContent.length} chars)`);
         } catch (error) {
-            console.error(`  ✗ Failed to summarize topic ${ topic.name }: `, error);
+            console.error(`  ✗ Failed to summarize topic ${topic.name}: `, error);
         }
     }
 
-    console.log(`✅ Summarization complete: ${ summariesCreated } summaries, ${ draftsCreated } drafts`);
+    console.log(`✅ Summarization complete: ${summariesCreated} summaries, ${draftsCreated} drafts`);
 
     return {
         summariesCreated,

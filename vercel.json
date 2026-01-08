@@ -1,5 +1,5 @@
 {
     "framework": "nextjs",
-    "buildCommand": "echo \"DATABASE_URL=$DATABASE_URL\" >> .env && echo \"OPENAI_API_KEY=$OPENAI_API_KEY\" >> .env && npx prisma generate && next build",
+    "buildCommand": "sed -i \"s|env(\\\"DATABASE_URL\\\")|\\\"$DATABASE_URL\\\"|g\" prisma/schema.prisma && npx prisma generate && next build",
     "installCommand": "npm install"
 }

@@ -113,25 +113,31 @@ JSONフォーマットで回答してください：
                 messages: [
                     {
                         role: 'system',
-                        content: `あなたはX（旧Twitter）用の投稿を作成する専門家です。AIや半導体業界のニュースを、興味を引く形で80〜140文字以内にまとめてください。`,
+                        content: `あなたは熱狂的なAIエンジニアです。最新のAI・半導体技術ニュースに興奮している様子で、X（旧Twitter）用の投稿を作成してください。`,
                     },
                     {
                         role: 'user',
-                        content: `以下の要約から、X投稿用のテキストを生成してください：
+                        content: `以下の要約から、フォロワー（技術者）に向けたX投稿用テキストを生成してください：
 
 要約: ${summaryData.japaneseSummary}
 なぜ注目: ${summaryData.whyHot}
 
 制約:
-- **必ず80文字以上、140文字以内**にしてください（空白・句読点を含む）
-- 興味を引く書き出しにしてください
+- **必ず80文字以上、140文字以内**にしてください
+- **文体**: 「〜です」「〜ます」「〜だ」「〜である」調は禁止。「〜だよね」「〜がすごい！」「〜に注目」などの**口語体（タメ口に近い親しみやすさ）**を使用してください
+- **トーン**: 驚き、興奮、技術への期待感を表現してください
 - ハッシュタグは不要です
-- 絵文字は適度に使用してください
+- 絵文字を文頭や文脈に合わせて2〜3個使用してください（🤖, 🚀, ⚡, 🤯 など）
 
 JSON形式で回答してください：
 {
   "content": "投稿テキスト（80-140文字）"
 }`,
+
+                        JSON形式で回答してください：
+{
+                        "content": "投稿テキスト（80-140文字）"
+                    }`,
                     },
                 ],
                 response_format: { type: 'json_object' },
@@ -143,14 +149,14 @@ JSON形式で回答してください：
 
             // Enforce 80-140 character limit
             if (draftContent.length < 80) {
-                console.warn(`  ⚠ Draft too short (${draftContent.length} chars), regenerating...`);
+                console.warn(`  ⚠ Draft too short(${ draftContent.length } chars), regenerating...`);
                 // Truncate the summary for a shorter prompt
                 const shortSummary = summaryData.japaneseSummary.substring(0, 100);
-                draftContent = `🚨 ${topic.name}の最新動向: ${shortSummary}...`;
+                draftContent = `🚨 ${ topic.name }の最新動向: ${ shortSummary }...`;
             }
 
             if (draftContent.length > 140) {
-                console.warn(`  ⚠ Draft too long (${draftContent.length} chars), truncating...`);
+                console.warn(`  ⚠ Draft too long(${ draftContent.length } chars), truncating...`);
                 draftContent = draftContent.substring(0, 137) + '...';
             }
 
@@ -163,13 +169,13 @@ JSON形式で回答してください：
             });
 
             draftsCreated++;
-            console.log(`  ✓ Created X draft (${draftContent.length} chars)`);
+            console.log(`  ✓ Created X draft(${ draftContent.length } chars)`);
         } catch (error) {
-            console.error(`  ✗ Failed to summarize topic ${topic.name}:`, error);
+            console.error(`  ✗ Failed to summarize topic ${ topic.name }: `, error);
         }
     }
 
-    console.log(`✅ Summarization complete: ${summariesCreated} summaries, ${draftsCreated} drafts`);
+    console.log(`✅ Summarization complete: ${ summariesCreated } summaries, ${ draftsCreated } drafts`);
 
     return {
         summariesCreated,

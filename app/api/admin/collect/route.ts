@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collectRSSFeeds } from '@/lib/services/rss-collector';
 
+export const runtime = 'nodejs';
+
+
+
 export async function POST(request: NextRequest) {
+    console.log("DB URL present?", !!process.env.DATABASE_URL);
     try {
         // Optional: Check endpoint secret if configured
         const secret = process.env.COLLECT_ENDPOINT_SECRET;

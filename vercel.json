@@ -1,5 +1,0 @@
-{
-    "framework": "nextjs",
-    "buildCommand": "sed -i \"s|env(\\\"DATABASE_URL\\\")|\\\"$DATABASE_URL\\\"|g\" prisma/schema.prisma && npx prisma generate && next build",
-    "installCommand": "npm install"
-}

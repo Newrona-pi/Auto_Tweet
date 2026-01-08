@@ -6,7 +6,11 @@ export const runtime = 'nodejs';
 
 
 export async function POST(request: NextRequest) {
-    console.log("DB URL present?", !!process.env.DATABASE_URL);
+    console.log("ENV CHECK", {
+        hasDatabaseUrl: !!process.env.DATABASE_URL,
+        databaseUrlLen: process.env.DATABASE_URL?.length ?? 0,
+        nodeEnv: process.env.NODE_ENV,
+    });
     try {
         // Optional: Check endpoint secret if configured
         const secret = process.env.COLLECT_ENDPOINT_SECRET;

@@ -188,15 +188,31 @@ button:disabled {
   display: flex;
   gap: 15px;
   overflow-x: auto;
-  padding-bottom: 10px;
-  /* Hide scrollbar but allow scroll */
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  padding-bottom: 15px;
+  /* Increased padding for scrollbar space */
+  /* Custom Scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) var(--surface-color);
 }
 
+/* Custom Scrollbar for Webkit */
 .topics-grid::-webkit-scrollbar {
-  display: none;
+  height: 4px;
+  display: block;
 }
+
+.topics-grid::-webkit-scrollbar-track {
+  background: var(--surface-color);
+}
+
+.topics-grid::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+}
+
+.topics-grid::-webkit-scrollbar-thumb:hover {
+  background: var(--text-main);
+}
+
 
 .topic-card {
   min-width: 200px;

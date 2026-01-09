@@ -1,0 +1,69 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # 1. CI Job: Test Build
+  build-check:
+    name: 🏗️ Quality Check (Build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      # ビルドチェック（エラーがあればここで止まる）
+      # 注: Vercel上でのビルドと環境を合わせるため、最低限の変数をセット
+      - name: Run Build
+        run: npm run build
+        env:
+          # DB接続がないとビルドコケる可能性がある場合用（今回はPrismaなので型生成だけでOKなはずだが念のため）
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy" 
+          # ビルド時にAPIキーの有無チェックがあるためダミーを入れる
+          OPENAI_API_KEY: "dummy-key"
+          SKIP_ENV_VALIDATION: "true"
+
+  # 2. CD Job: Deploy to Vercel
+  deploy:
+    name: 🚀 Deploy to Vercel
+    needs: build-check
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build Project Artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy Project Artifacts to Vercel
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

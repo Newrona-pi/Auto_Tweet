@@ -35,6 +35,18 @@ export async function summarizeTopics(topCount: number = 5): Promise<Summarizati
         take: topCount,
     });
 
+    // [NEW] Fetch recent context (last 5 summaries) to provide continuity
+    const pastSummaries = await prisma.summary.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+        include: { topic: { select: { name: true } } }
+    });
+
+    // Format context for the LLM
+    const contextText = pastSummaries.length > 0
+        ? pastSummaries.map(s => `- [${new Date(s.createdAt).toLocaleDateString('ja-JP')}] ${s.topic.name}: ${s.japaneseSummary.substring(0, 50)}...`).join('\n')
+        : "過去の履歴なし";
+
     // Filter out topics that already have summaries
     const topicsToSummarize = topics.filter((topic) => topic.summaries.length === 0);
 
@@ -44,6 +56,7 @@ export async function summarizeTopics(topCount: number = 5): Promise<Summarizati
     }
 
     console.log(`  Found ${topicsToSummarize.length} topics to summarize`);
+    console.log(`  Context loaded: ${pastSummaries.length} past items`);
 
     let summariesCreated = 0;
     let draftsCreated = 0;
@@ -113,7 +126,12 @@ JSONフォーマットで回答してください：
                 messages: [
                     {
                         role: 'system',
-                        content: `あなたは熱狂的なAIエンジニアです。最新のAI・半導体技術ニュースに興奮している様子で、X（旧Twitter）用の投稿を作成してください。`,
+                        content: `あなたは熱狂的なAIエンジニアです。最新のAI・半導体技術ニュースに興奮している様子で、X（旧Twitter）用の投稿を作成してください。
+
+【直近の技術トレンド・文脈】:
+${contextText}
+
+上記の文脈を（もし関連があれば）踏まえつつ、以下の新しいニュースについて投稿を作成してください。`,
                     },
                     {
                         role: 'user',

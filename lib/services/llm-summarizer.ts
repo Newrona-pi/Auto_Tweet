@@ -21,7 +21,8 @@ export async function summarizeTopics(topCount: number = 5): Promise<Summarizati
     console.log(`📝 Summarizing top ${topCount} topics...`);
 
     // Get topics ordered by highest attention score that haven't been summarized yet
-    const topics = await prisma.topic.findMany({
+    // Fetch more candidates (20) to sort by "freshness" (latest article date) in memory
+    const candidateTopics = await prisma.topic.findMany({
         where: {
             summaries: {
                 none: {}
@@ -29,15 +30,22 @@ export async function summarizeTopics(topCount: number = 5): Promise<Summarizati
         },
         include: {
             items: {
-                orderBy: { attentionScore: 'desc' },
-                take: 10, // Max 10 items per topic
+                orderBy: { publishedAt: 'desc' }, // Get newest items first to easily check freshness
+                take: 10,
             },
             summaries: true,
         },
         orderBy: {
             clusteredAt: 'desc',
         },
-        take: topCount,
+        take: 20, // Look at recent 20 batches
+    });
+
+    // Sort candidates by the date of their NEWEST item
+    const sortedTopics = candidateTopics.sort((a, b) => {
+        const aLatest = a.items.length > 0 ? new Date(a.items[0].publishedAt).getTime() : 0;
+        const bLatest = b.items.length > 0 ? new Date(b.items[0].publishedAt).getTime() : 0;
+        return bLatest - aLatest; // Newest first
     });
 
     // [NEW] Fetch recent context (last 5 summaries) to provide continuity
@@ -52,14 +60,15 @@ export async function summarizeTopics(topCount: number = 5): Promise<Summarizati
         ? pastSummaries.map(s => `- [${new Date(s.createdAt).toLocaleDateString('ja-JP')}] ${s.topic.name}: ${s.japaneseSummary.substring(0, 50)}...`).join('\n')
         : "過去の履歴なし";
 
-    const topicsToSummarize = topics;
+    // Take top N
+    const topicsToSummarize = sortedTopics.slice(0, topCount);
 
     if (topicsToSummarize.length === 0) {
         console.log('  No topics need summarization');
         return { summariesCreated: 0, draftsCreated: 0 };
     }
 
-    console.log(`  Found ${topicsToSummarize.length} topics to summarize`);
+    console.log(`  Found ${topicsToSummarize.length} topics to summarize (prioritizing fresh content)`);
     console.log(`  Context loaded: ${pastSummaries.length} past items`);
 
     let summariesCreated = 0;

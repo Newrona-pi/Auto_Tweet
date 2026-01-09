@@ -28,11 +28,7 @@ export async function GET() {
                 source: {
                     select: { name: true }
                 },
-                topics: {
-                    include: {
-                        topic: true
-                    }
-                }
+                topic: true
             }
         });
 
@@ -49,7 +45,7 @@ export async function GET() {
                 url: i.url,
                 source: i.source.name,
                 publishedAt: i.publishedAt,
-                topics: i.topics.map(ti => ti.topic.name).join(', ')
+                topics: i.topic?.name || '-'
             }))
         });
 

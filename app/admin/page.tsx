@@ -18,7 +18,7 @@ interface Draft {
 
 interface AnalysisData {
     topics: { id: string; name: string; itemCount: number }[];
-    items: { id: string; title: string; source: string; publishedAt: string; topics: string }[];
+    items: { id: string; title: string; url: string; source: string; publishedAt: string; topics: string }[];
 }
 
 export default function AdminPage() {

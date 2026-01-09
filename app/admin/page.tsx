@@ -97,22 +97,35 @@ export default function AdminPage() {
     const usedTopicNames = new Set(drafts.map(d => d.summary.topic.name));
 
     // Filter Items based on selection and usage status
-    const filteredItems = analysis.items.filter(item => {
-        const itemTopicName = item.topics; // Currently holds topic name or '-'
-        const isUsed = usedTopicNames.has(itemTopicName);
+    const filteredItems = useMemo(() => {
+        let items = analysis.items;
 
-        // 1. Context Filter (Topic Selection)
-        if (selectedTopicName && itemTopicName !== selectedTopicName) {
-            return false;
+        // 1. Filter by Topic
+        if (selectedTopicName) {
+            items = items.filter(i => i.topics === selectedTopicName);
         }
 
-        // 2. Status Filter (Unused Only)
-        if (showUnusedOnly && isUsed) {
-            return false;
+        // 2. Filter by Usage Status (exclusive toggles)
+        if (showUnusedOnly) {
+            items = items.filter(i => !usedTopicNames.has(i.topics));
+        }
+        if (showUsedOnly) {
+            items = items.filter(i => usedTopicNames.has(i.topics));
         }
 
-        return true;
-    });
+        return items;
+    }, [analysis.items, selectedTopicName, showUnusedOnly, showUsedOnly, usedTopicNames]);
+
+    // Handlers for exclusive toggles
+    const handleUnusedToggle = (checked: boolean) => {
+        setShowUnusedOnly(checked);
+        if (checked) setShowUsedOnly(false);
+    };
+
+    const handleUsedToggle = (checked: boolean) => {
+        setShowUsedOnly(checked);
+        if (checked) setShowUnusedOnly(false);
+    };
 
     return (
         <div className="admin-container">
@@ -249,18 +262,28 @@ export default function AdminPage() {
                                     </span>
                                 </h4>
 
-                                <div className="filter-controls">
+                                <div className="filter-controls" style={{ display: 'flex', gap: '20px' }}>
                                     <label className="toggle-switch">
                                         <input
                                             type="checkbox"
                                             className="toggle-input"
                                             checked={showUnusedOnly}
-                                            onChange={(e) => setShowUnusedOnly(e.target.checked)}
+                                            onChange={(e) => handleUnusedToggle(e.target.checked)}
                                         />
                                         <span>HIDE USED</span>
                                     </label>
+                                    <label className="toggle-switch">
+                                        <input
+                                            type="checkbox"
+                                            className="toggle-input"
+                                            checked={showUsedOnly}
+                                            onChange={(e) => handleUsedToggle(e.target.checked)}
+                                        />
+                                        <span>SHOW USED ONLY</span>
+                                    </label>
                                 </div>
                             </div>
+
 
                             <div className="articles-scroll-container">
                                 <table className="data-table">

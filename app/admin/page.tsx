@@ -30,8 +30,10 @@ export default function AdminPage() {
     const [drafts, setDrafts] = useState<Draft[]>([]);
     const [analysis, setAnalysis] = useState<AnalysisData>({ topics: [], items: [] });
 
-    // Control States
+    // UI Control States
     const [collectHours, setCollectHours] = useState('1');
+    const [selectedTopicName, setSelectedTopicName] = useState<string | null>(null);
+    const [showUnusedOnly, setShowUnusedOnly] = useState(false);
 
     const fetchData = async () => {
         try {
@@ -88,6 +90,29 @@ export default function AdminPage() {
             setLoading(false);
         }
     };
+
+    // --- Derived Data & Filtering Logic ---
+
+    // Identify topics that have drafts generated
+    const usedTopicNames = new Set(drafts.map(d => d.summary.topic.name));
+
+    // Filter Items based on selection and usage status
+    const filteredItems = analysis.items.filter(item => {
+        const itemTopicName = item.topics; // Currently holds topic name or '-'
+        const isUsed = usedTopicNames.has(itemTopicName);
+
+        // 1. Context Filter (Topic Selection)
+        if (selectedTopicName && itemTopicName !== selectedTopicName) {
+            return false;
+        }
+
+        // 2. Status Filter (Unused Only)
+        if (showUnusedOnly && isUsed) {
+            return false;
+        }
+
+        return true;
+    });
 
     return (
         <div className="admin-container">
@@ -168,67 +193,135 @@ export default function AdminPage() {
                     {/* Analysis Section */}
                     <div className="analysis-section">
                         <h3>📊 RSS Analysis</h3>
-                        <div className="analysis-grid">
 
-                            {/* Topics List */}
-                            <div className="topics-column">
-                                <h4 style={{ marginBottom: '1rem', color: '#94a3b8' }}>Active Topics</h4>
-                                <div className="topics-list">
-                                    {analysis.topics.length === 0 ? (
-                                        <div style={{ color: '#64748b', textAlign: 'center' }}>No topics yet</div>
-                                    ) : (
-                                        analysis.topics.map(t => (
-                                            <div key={t.id} className="topic-item">
-                                                <span>{t.name}</span>
-                                                <span className="topic-count">{t.itemCount}</span>
+                        {/* 1. Active Topics Cards (Horizontal Scroll) */}
+                        <div className="topics-container" style={{ marginBottom: '2rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                <h4 style={{ color: '#94a3b8', margin: 0 }}>Active Topics (Click to Filter)</h4>
+                                {selectedTopicName && (
+                                    <button
+                                        onClick={() => setSelectedTopicName(null)}
+                                        style={{ background: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.3)', color: '#38bdf8', cursor: 'pointer', fontSize: '0.85rem', padding: '4px 12px', borderRadius: '15px' }}
+                                    >
+                                        Clear Filter ✕
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="topics-grid">
+                                {analysis.topics.length === 0 ? (
+                                    <div style={{ color: '#64748b', padding: '1rem' }}>No topics yet</div>
+                                ) : (
+                                    analysis.topics.map(t => {
+                                        const isUsed = usedTopicNames.has(t.name);
+                                        const isActive = selectedTopicName === t.name;
+                                        return (
+                                            <div
+                                                key={t.id}
+                                                className={`topic-card ${isActive ? 'active' : ''}`}
+                                                onClick={() => setSelectedTopicName(isActive ? null : t.name)}
+                                            >
+                                                <div className="topic-header">
+                                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                        {isUsed && <span className="topic-used-indicator" title="Draft generated"></span>}
+                                                        <span className="topic-name">{t.name}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="topic-stats">
+                                                    <span>{t.itemCount} articles</span>
+                                                    {isUsed && <span className="topic-badge">Used</span>}
+                                                </div>
                                             </div>
-                                        ))
-                                    )}
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+
+                        {/* 2. Recent Articles Table (Filtered) */}
+                        <div className="articles-container">
+                            <div className="articles-header">
+                                <h4 style={{ color: '#94a3b8', margin: 0 }}>
+                                    Collected Articles
+                                    {selectedTopicName && <span style={{ color: '#e2e8f0' }}> : {selectedTopicName}</span>}
+                                    <span style={{ fontSize: '0.8em', marginLeft: '0.8rem', fontWeight: 'normal', color: '#64748b' }}>
+                                        ({filteredItems.length} items)
+                                    </span>
+                                </h4>
+
+                                <div className="filter-controls">
+                                    <label className="toggle-switch">
+                                        <input
+                                            type="checkbox"
+                                            className="toggle-input"
+                                            checked={showUnusedOnly}
+                                            onChange={(e) => setShowUnusedOnly(e.target.checked)}
+                                        />
+                                        <span>Show Unused Only</span>
+                                    </label>
                                 </div>
                             </div>
 
-                            {/* Recent Articles */}
-                            <div className="articles-column">
-                                <h4 style={{ marginBottom: '1rem', color: '#94a3b8' }}>Recent Collected Articles (Max 100)</h4>
-                                <div className="table-container">
-                                    <table className="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Title</th>
-                                                <th>Source</th>
-                                                <th>Date</th>
-                                                <th>Topic</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {analysis.items.length === 0 ? (
-                                                <tr><td colSpan={4} style={{ textAlign: 'center', color: '#64748b' }}>No items collected</td></tr>
-                                            ) : (
-                                                analysis.items.map(item => (
-                                                    <tr key={item.id}>
+                            <div className="articles-scroll-container">
+                                <table className="data-table">
+                                    <thead style={{ position: 'sticky', top: 0, background: '#0f172a', zIndex: 10, boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}>
+                                        <tr>
+                                            <th style={{ width: '80px', textAlign: 'center' }}>Status</th>
+                                            <th>Title</th>
+                                            <th style={{ width: '120px' }}>Source</th>
+                                            <th style={{ width: '150px' }}>Topic</th>
+                                            <th style={{ width: '140px' }}>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredItems.length === 0 ? (
+                                            <tr><td colSpan={5} style={{ textAlign: 'center', padding: '3rem', color: '#64748b' }}>
+                                                {analysis.items.length === 0 ? 'No items collected yet.' : 'No items match current filter.'}
+                                            </td></tr>
+                                        ) : (
+                                            filteredItems.map(item => {
+                                                const isUsed = usedTopicNames.has(item.topics);
+                                                return (
+                                                    <tr key={item.id} className={`article-row ${isUsed ? 'used' : ''}`}>
+                                                        <td style={{ textAlign: 'center' }}>
+                                                            {isUsed
+                                                                ? <span className="status-badge status-used">Used</span>
+                                                                : <span className="status-badge status-unused">-</span>
+                                                            }
+                                                        </td>
                                                         <td>
-                                                            <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none', fontWeight: 500 }}>
+                                                            <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none', fontWeight: 500, display: 'block' }}>
                                                                 {item.title}
                                                             </a>
                                                         </td>
                                                         <td><span className="source-badge">{item.source}</span></td>
-                                                        <td>{new Date(item.publishedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
-                                                        <td>{item.topics || '-'}</td>
+                                                        <td>
+                                                            <span style={{ fontSize: '0.9em', color: item.topics === '-' ? '#64748b' : 'inherit' }}>
+                                                                {item.topics}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ fontSize: '0.85em', color: '#94a3b8' }}>{new Date(item.publishedAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</td>
                                                     </tr>
-                                                ))
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
 
                     {/* Drafts List */}
-                    <div className="drafts-section" style={{ marginTop: '3rem' }}>
-                        <h3>📝 Generated Drafts</h3>
+                    <div className="drafts-section" style={{ marginTop: '4rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: '1.5rem' }}>
+                            <h3>📝 Generated Drafts</h3>
+                            <span style={{ marginLeft: '1rem', color: '#64748b', fontSize: '0.9rem' }}>{drafts.length} drafts</span>
+                        </div>
+
                         {drafts.length === 0 ? (
-                            <p className="no-data">No drafts generated yet.</p>
+                            <div className="no-data" style={{ background: 'rgba(255,255,255,0.05)', padding: '3rem', borderRadius: '12px', textAlign: 'center', color: '#94a3b8' }}>
+                                No drafts generated yet. Run "Collect" then "Summarize Now".
+                            </div>
                         ) : (
                             <div className="drafts-grid">
                                 {drafts.map((draft) => (

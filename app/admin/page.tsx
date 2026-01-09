@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import './admin.css';
 
 interface Draft {
@@ -34,6 +34,7 @@ export default function AdminPage() {
     const [collectHours, setCollectHours] = useState('1');
     const [selectedTopicName, setSelectedTopicName] = useState<string | null>(null);
     const [showUnusedOnly, setShowUnusedOnly] = useState(false);
+    const [showUsedOnly, setShowUsedOnly] = useState(false);
 
     const fetchData = async () => {
         try {

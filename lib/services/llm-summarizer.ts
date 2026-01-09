@@ -20,8 +20,13 @@ export interface SummarizationResult {
 export async function summarizeTopics(topCount: number = 5): Promise<SummarizationResult> {
     console.log(`📝 Summarizing top ${topCount} topics...`);
 
-    // Get topics ordered by highest attention score
+    // Get topics ordered by highest attention score that haven't been summarized yet
     const topics = await prisma.topic.findMany({
+        where: {
+            summaries: {
+                none: {}
+            }
+        },
         include: {
             items: {
                 orderBy: { attentionScore: 'desc' },
@@ -47,8 +52,7 @@ export async function summarizeTopics(topCount: number = 5): Promise<Summarizati
         ? pastSummaries.map(s => `- [${new Date(s.createdAt).toLocaleDateString('ja-JP')}] ${s.topic.name}: ${s.japaneseSummary.substring(0, 50)}...`).join('\n')
         : "過去の履歴なし";
 
-    // Filter out topics that already have summaries
-    const topicsToSummarize = topics.filter((topic) => topic.summaries.length === 0);
+    const topicsToSummarize = topics;
 
     if (topicsToSummarize.length === 0) {
         console.log('  No topics need summarization');

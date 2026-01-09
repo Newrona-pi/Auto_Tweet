@@ -1,0 +1,27 @@
+name: Collect News
+
+on:
+  schedule:
+    # 毎日 JST 12:00 (UTC 03:00) に実行
+    - cron: '0 3 * * *'
+  # 手動実行も可能にする（Actionsタブからボタンで実行）
+  workflow_dispatch:
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit Collection API
+        run: |
+          # 収集APIを叩く (詳細ログを表示)
+          # APP_BASE_URL は GitHub Settings > Secrets AND variables > Actions で設定してください
+          # 例: https://your-project.vercel.app
+          
+          echo "Triggering Collection API at $APP_BASE_URL/api/admin/collect"
+          
+          curl -X POST "$APP_BASE_URL/api/admin/collect" \
+               -H "Content-Type: application/json" \
+               -d '{"hours": 24}' \
+               --fail --verbose
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}

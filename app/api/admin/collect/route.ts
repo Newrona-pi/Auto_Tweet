@@ -6,28 +6,36 @@ export const runtime = 'nodejs';
 
 
 export async function POST(request: NextRequest) {
-    // Date Range Restriction Logic
-    const now = new Date();
-    // Check if within 2026-01-13 to 2026-01-16 (JST)
-    // Note: Server time might be UTC, so we work with ISO strings or timestamp comparisons
-    const startDate = new Date('2026-01-13T00:00:00+09:00');
-    const endDate = new Date('2026-01-16T23:59:59+09:00');
+    console.log("ENV CHECK", { hasDatabaseUrl: !!process.env.DATABASE_URL });
 
-    if (now < startDate || now > endDate) {
-        console.log(`Skipping collection. Current time (${now.toISOString()}) is outside allowed range.`);
-        return NextResponse.json({
-            skipped: true,
-            message: 'Collection skipped due to date restriction (2026/01/13-16 only).'
-        });
-    }
-
-    console.log("ENV CHECK", {
-        hasDatabaseUrl: !!process.env.DATABASE_URL,
-        databaseUrlLen: process.env.DATABASE_URL?.length ?? 0,
-        nodeEnv: process.env.NODE_ENV,
-    });
     try {
-        // Optional: Check endpoint secret if configured
+        // 1. Determine time range (hours)
+        // Default: 1 hour (per user request)
+        let hours = 1;
+
+        // Check Query Param first
+        const { searchParams } = new URL(request.url);
+        if (searchParams.has('hours')) {
+            hours = parseInt(searchParams.get('hours') || '1', 10);
+        } else {
+            // Check Body
+            try {
+                const body = await request.clone().json();
+                if (body && body.hours) {
+                    hours = parseInt(body.hours, 10);
+                }
+            } catch (e) {
+                // Ignore body parse errors (e.g. from Cron)
+            }
+        }
+
+        // Calculate cutoff date
+        const since = new Date();
+        since.setHours(since.getHours() - hours);
+
+        console.log(`🚀 Starting RSS collection (Filter: last ${hours} hours, since ${since.toISOString()})...`);
+
+        // 2. Check secret (Optional)
         const secret = process.env.COLLECT_ENDPOINT_SECRET;
         if (secret) {
             const authHeader = request.headers.get('authorization');
@@ -36,12 +44,13 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        console.log('🚀 Starting RSS collection...');
-        const result = await collectRSSFeeds();
+        // 3. Execute Collection with filter
+        const result = await collectRSSFeeds(since);
 
         return NextResponse.json({
             success: true,
-            message: `Collected ${result.newItems} new items`,
+            filter: { hours, since: since.toISOString() },
+            message: `Collected ${result.newItems} new items (Last ${hours}h)`,
             data: result,
         });
     } catch (error) {

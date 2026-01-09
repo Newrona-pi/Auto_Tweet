@@ -9,7 +9,7 @@ export interface CollectionResult {
     errors: string[];
 }
 
-export async function collectRSSFeeds(): Promise<CollectionResult> {
+export async function collectRSSFeeds(since?: Date): Promise<CollectionResult> {
     const sources = await prisma.source.findMany({
         where: { enabled: true, type: 'rss' },
     });
@@ -30,6 +30,13 @@ export async function collectRSSFeeds(): Promise<CollectionResult> {
 
                 if (!item.link || !item.title) {
                     continue; // Skip items without required fields
+                }
+
+                const publishedAt = item.pubDate ? new Date(item.pubDate) : new Date();
+
+                // Filter by date if 'since' is provided
+                if (since && publishedAt < since) {
+                    continue;
                 }
 
                 // Check if item already exists

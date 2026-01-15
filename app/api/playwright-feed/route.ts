@@ -15,14 +15,14 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // 3. データ取得 (最新4時間以内)
-        const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+        // 3. データ取得 (最新2時間以内)
+        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
 
         const drafts = await prisma.draftPost.findMany({
             where: {
                 posted: false,
                 createdAt: {
-                    gte: fourHoursAgo,
+                    gte: twoHoursAgo,
                 },
             },
             orderBy: {

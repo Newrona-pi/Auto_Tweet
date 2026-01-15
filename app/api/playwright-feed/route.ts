@@ -1,37 +1,32 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma'; // Prismaクライアントのパスは環境に合わせて調整してください
 
-export const dynamic = 'force-dynamic'; // Ensure no caching
+export const dynamic = 'force-dynamic'; // キャッシュ無効化
 
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
     try {
-        // 1. Authentication (Header Key Check)
-        const apiKey = request.headers.get('x-feed-key');
-        const envKey = process.env.FEED_API_KEY;
+        // 1. URLパラメータから 'key' を取得
+        const { searchParams } = new URL(request.url);
+        const apiKey = searchParams.get('key');
 
-        if (!envKey) {
-            console.error('SERVER CONFIG ERROR: FEED_API_KEY is not set');
-            return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-        }
-
-        if (apiKey !== envKey) {
-            console.warn('Unauthorized feed access attempt');
+        // 2. 認証チェック
+        if (apiKey !== process.env.FEED_API_KEY) {
+            console.error('Auth Failed. Received:', apiKey);
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // 2. Data Retrieval
-        // Fetch pending drafts (posted: false)
-        // Need to traverse relations to get the original source URL
+        // 3. データ取得 (最新4時間以内)
+        const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+
         const drafts = await prisma.draftPost.findMany({
             where: {
                 posted: false,
-                // [更新] 作成から2時間以内のドラフトのみを取得（鮮度保証）
                 createdAt: {
-                    gte: new Date(Date.now() - 2 * 60 * 60 * 1000)
-                }
+                    gte: fourHoursAgo,
+                },
             },
             orderBy: {
-                createdAt: 'desc'
+                createdAt: 'desc',
             },
             take: 10,
             include: {
@@ -40,27 +35,29 @@ export async function GET(request: NextRequest) {
                         topic: {
                             include: {
                                 items: {
-                                    orderBy: { attentionScore: 'desc' }, // Get main article
-                                    take: 1
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+                                    take: 1,
+                                    orderBy: { attentionScore: 'desc' }
+                                },
+                            },
+                        },
+                    },
+                },
+            },
         });
 
-        // 3. Transform to required JSON format
-        const responseData = drafts.map(draft => {
-            // Extract URL from the most relevant item in the topic
-            const items = draft.summary.topic.items;
-            const sourceUrl = items.length > 0 ? items[0].url : '';
+        // 4. 整形して返す
+        const responseData = drafts.map((draft) => {
+            // 階層が深いので安全に取得
+            // Note: In Prisma schema, Topic has many Items (items[]), not single item.
+            // So we take the first item from the array we fetched.
+            const items = draft.summary?.topic?.items;
+            const sourceUrl = (items && items.length > 0) ? items[0].url : "";
 
             return {
                 id: draft.id,
                 content: draft.content,
                 source_url: sourceUrl,
-                created_at: draft.createdAt.toISOString()
+                created_at: draft.createdAt,
             };
         });
 
@@ -68,9 +65,6 @@ export async function GET(request: NextRequest) {
 
     } catch (error) {
         console.error('Feed API Error:', error);
-        return NextResponse.json(
-            { error: 'Internal Server Error' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

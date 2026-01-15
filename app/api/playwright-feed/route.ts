@@ -24,7 +24,11 @@ export async function GET(request: NextRequest) {
         // Need to traverse relations to get the original source URL
         const drafts = await prisma.draftPost.findMany({
             where: {
-                posted: false
+                posted: false,
+                // [更新] 作成から4時間以内のドラフトのみを取得（鮮度保証）
+                createdAt: {
+                    gte: new Date(Date.now() - 4 * 60 * 60 * 1000)
+                }
             },
             orderBy: {
                 createdAt: 'desc'

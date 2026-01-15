@@ -77,21 +77,39 @@ async function handleAutopilot(request: NextRequest) {
 
         logs.push(`Selected draft ID ${candidateDraft.id} about "${candidateDraft.summary.topic.name}"`);
 
-        // 5. POST
-        logs.push('Phase 4: Posting');
+        // 5. POST - DISABLED (PULL STRATEGY ADOPTED)
+        // We no longer post directly to X API from here.
+        // Instead, we just leave the draft as "posted: false" (or maybe we should mark it as ready? 
+        // For now, let's just Log and NOT mark as posted, so the Pull API can pick it up).
+
+        // Actually, if we don't mark as posted, the Pull API will pick it up.
+        // But if we run this Autopilot again, it might pick the SAME draft again as "candidateDraft".
+        // To avoid this loop, maybe we should have a 'status' field, but for now, 
+        // let's assume the Pull API will run frequently enough, OR we just let it accumulate.
+
+        // BETTER STRATEGY: 
+        // The Prompt asked to "Generate Draft -> Save -> Ensure published is false".
+        // This is already done by summarizeTopics.
+        // So we just stop here.
+
+        logs.push('Phase 4: Posting (SKIPPED)');
+        logs.push('NOTE: Direct API posting is disabled. Draft is ready for Playwright Pull.');
+
+        /* 
+        // --- OLD POSTING LOGIC ---
         const postResult = await postToX(candidateDraft.content);
 
         if (postResult.success) {
             // Mark as posted
             await prisma.draftPost.update({
                 where: { id: candidateDraft.id },
-                data: {
+                data: { 
                     posted: true,
                     postedAt: new Date()
                 }
             });
             logs.push(`✅ Posted successfully! Post ID: ${postResult.id}`);
-
+            
             return NextResponse.json({
                 success: true,
                 message: 'Autopilot completed successfully',
@@ -110,6 +128,17 @@ async function handleAutopilot(request: NextRequest) {
                 logs
             }, { status: 500 });
         }
+        */
+
+        return NextResponse.json({
+            success: true,
+            message: 'Autopilot completed (Generation only). Ready for Pull.',
+            data: {
+                draft: candidateDraft.content,
+                status: 'pending_pull'
+            },
+            logs
+        });
 
     } catch (error) {
         console.error('Autopilot error:', error);

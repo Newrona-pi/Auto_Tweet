@@ -6,14 +6,14 @@ export const dynamic = 'force-dynamic'; // キャッシュ無効化
 export async function GET(request: Request) {
     try {
         // 1. URLパラメータから 'key' を取得
-        const { searchParams } = new URL(request.url);
-        const apiKey = searchParams.get('key');
+        // const { searchParams } = new URL(request.url);
+        // const apiKey = searchParams.get('key');
 
-        // 2. 認証チェック
-        if (apiKey !== process.env.FEED_API_KEY) {
-            console.error('Auth Failed. Received:', apiKey);
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        // 2. 認証チェック (DEBUG: TEMPORARILY DISABLED)
+        // if (apiKey !== process.env.FEED_API_KEY) {
+        //     console.error('Auth Failed. Received:', apiKey);
+        //     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        // }
 
         // 3. データ取得 (最新2時間以内)
         const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);

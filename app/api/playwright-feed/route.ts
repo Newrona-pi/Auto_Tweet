@@ -25,9 +25,9 @@ export async function GET(request: NextRequest) {
         const drafts = await prisma.draftPost.findMany({
             where: {
                 posted: false,
-                // [更新] 作成から4時間以内のドラフトのみを取得（鮮度保証）
+                // [更新] 作成から2時間以内のドラフトのみを取得（鮮度保証）
                 createdAt: {
-                    gte: new Date(Date.now() - 4 * 60 * 60 * 1000)
+                    gte: new Date(Date.now() - 2 * 60 * 60 * 1000)
                 }
             },
             orderBy: {

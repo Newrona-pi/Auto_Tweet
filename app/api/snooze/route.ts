@@ -51,7 +51,6 @@ export async function POST(request: Request) {
             executeAt: null,
             mode: null,
             reserveUntil: null,
-            snoozeUntil: null,
         },
     });
 

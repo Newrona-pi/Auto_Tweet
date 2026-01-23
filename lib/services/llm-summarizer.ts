@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
 import { prisma } from '@/lib/prisma';
+import { computeImpactScoreFromItems, computeNotAfter } from '@/lib/services/draft-scoring';
+import { DraftState } from '@prisma/client';
 
 // Lazy initialization of OpenAI client
 function getOpenAIClient() {
@@ -187,10 +189,29 @@ JSON形式で回答してください：
             }
 
             // Create draft post
+            // Create draft post
+            const { impactScore, sourceUrl } = computeImpactScoreFromItems(
+                topic.items.map((it) => ({ attentionScore: it.attentionScore ?? 0, url: it.url }))
+            );
+
+            // Skip C-class (<40)
+            if (impactScore < 40) {
+                console.log(`  ⚠ impactScore ${impactScore} too low, skipping draft.`);
+                continue;
+            }
+
+            const createdAt = new Date();
+            const notAfter = computeNotAfter(createdAt, impactScore);
+
             await prisma.draftPost.create({
                 data: {
                     summaryId: summary.id,
                     content: draftContent,
+                    state: DraftState.NEW,
+                    impactScore,
+                    notAfter,
+                    sourceUrl,
+                    posted: false,
                 },
             });
 

@@ -1,7 +1,11 @@
 import Parser from 'rss-parser';
 import { prisma } from '@/lib/prisma';
 
-const parser = new Parser();
+const parser = new Parser({
+    xml2js: {
+        strict: false,
+    } as any, // Bypass TS check if types are outdated, though usually supported
+});
 
 export interface CollectionResult {
     newItems: number;
